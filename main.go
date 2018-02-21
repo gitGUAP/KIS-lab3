@@ -2,16 +2,40 @@ package main
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
+	"net/http"
 
 	_ "github.com/mattn/go-sqlite3"
 )
 
-func main() {
-	db, err := sql.Open("sqlite3", "./sqlite.db")
+var (
+	DB *sql.DB
+)
+
+func handler(w http.ResponseWriter, r *http.Request) {
+	rows, err := DB.Query(`SELECT name_cat FROM Category`)
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer rows.Close()
+	for rows.Next() {
+		var id int
+		var name string
+		err = rows.Scan(&id, &name)
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Println(id, name)
+	}
+}
+
+func main() {
+	DB, err := sql.Open("sqlite3", "./sqlite.db")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer DB.Close()
 
 	// CREATE TABLE Category (
 	// 	id_cat   INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -40,5 +64,5 @@ func main() {
 	// 	weight      INTEGER
 	// );
 
-	defer db.Close()
+	http.HandleFunc("/", handler)
 }
