@@ -2,7 +2,7 @@ package main
 
 import (
 	"database/sql"
-	"fmt"
+	"html/template"
 	"log"
 	"net/http"
 
@@ -19,19 +19,23 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		log.Fatal(err)
 	}
 	defer rows.Close()
+
+	tmpl, _ := template.ParseFiles("tmpl/index.html")
+
+	names := []string{}
+
 	for rows.Next() {
-		var id int
-		var name string
-		err = rows.Scan(&id, &name)
-		if err != nil {
-			log.Fatal(err)
-		}
-		fmt.Println(id, name)
+		var temp string
+		rows.Scan(&temp)
+		names = append(names, temp)
 	}
+
+	tmpl.Execute(w, names)
 }
 
 func main() {
-	DB, err := sql.Open("sqlite3", "./sqlite.db")
+	var err error
+	DB, err = sql.Open("sqlite3", "./sqlite.db")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -63,6 +67,10 @@ func main() {
 	// 	manufacture TEXT,
 	// 	weight      INTEGER
 	// );
-
+	fs := http.FileServer(http.Dir("static"))
 	http.HandleFunc("/", handler)
+	http.Handle("/static/", http.StripPrefix("/static/", fs))
+
+	log.Println("Listening...")
+	log.Fatal(http.ListenAndServe(":8080", nil))
 }
